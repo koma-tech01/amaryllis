@@ -421,7 +421,7 @@
 <script>
 // ══════════════════════════════════════════════════════════
 // ★ ここにデプロイしたGASのURLを貼り付けてください ★
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwEWk1cXrkaEF3y53zSdu8sYv_SnKmZzoyhAUGQWc8ea4UA_0jrdF7ALvrLMxhBexga/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx9dP4Ld7BtxrYzx6vA0_ZNWzFjGJNbFrgOMj3OFqunRCqoSM7G5oRTam3b5H_9t8ia/exec';
 // ══════════════════════════════════════════════════════════
 
 let currentUser = null;
@@ -575,7 +575,7 @@ async function loadStamp() {
 }
 
 async function doStamp(action) {
-  const res = await api({ action: 'postStamp', employeeId: currentUser.employeeId, action });
+  const res = await api({ action: 'postStamp', employeeId: currentUser.employeeId, stampAction: action });
   const stateIdx = ['未出勤','出勤中','外出中','退勤済'].indexOf(stampState);
   const resultEl = document.getElementById('sr' + stateIdx);
   if (!res.ok) { sr(resultEl, 're', res.error); return; }
