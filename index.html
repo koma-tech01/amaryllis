@@ -421,7 +421,7 @@
 <script>
 // ══════════════════════════════════════════════════════════
 // ★ ここにデプロイしたGASのURLを貼り付けてください ★
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbz0fFOMxOGNmdbtsGhXGDwQpWn37X4DZhj6j9d1aBqukjywvkdTcKWtjETTFiTgJfr_/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwEWk1cXrkaEF3y53zSdu8sYv_SnKmZzoyhAUGQWc8ea4UA_0jrdF7ALvrLMxhBexga/exec';
 // ══════════════════════════════════════════════════════════
 
 let currentUser = null;
@@ -859,7 +859,7 @@ async function doApprove(type, id, action) {
     leave:    'approveLeave',
     apply:    'approveApply',
   };
-  const res = await api({ action: actionMap[type], id, action, approvedBy: currentUser.employeeId });
+  const res = await api({ action: actionMap[type], id, judgment: action, approvedBy: currentUser.employeeId });
   if (res.ok) {
     const loaders = { overtime: loadMgrOt, leave: loadMgrLeave, apply: loadMgrApply };
     loaders[type]();
