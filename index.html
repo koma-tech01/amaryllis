@@ -431,7 +431,9 @@ let stampState = '未出勤';
 async function api(params) {
   const res = await fetch(GAS_URL, {
     method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(params),
+    redirect: 'follow',
   });
   return res.json();
 }
