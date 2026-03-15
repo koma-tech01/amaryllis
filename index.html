@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社員勤怠管理システム</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3350;
+    --accent:#4f8ef7;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;
+    --text:#e2e8f0;--muted:#64748b;--dim:#94a3b8;
+    --mono:'JetBrains Mono',monospace;--sans:'Noto Sans JP',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;}
+  .layout{display:grid;grid-template-columns:220px 1fr;grid-template-rows:56px 1fr;min-height:100vh;}
+  .topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:100;}
+  .logo{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--accent);}
+  .topbar-user{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--dim);}
+  .avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
+  .avatar.manager{background:var(--warning);}
+  .role-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
+  .role-emp{background:rgba(79,142,247,.15);color:var(--accent);}
+  .role-mgr{background:rgba(245,158,11,.15);color:var(--warning);}
+  .btn-logout{padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--sans);}
+  .btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+  .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;}
+  .sidebar-sec{padding:8px 16px 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+  .nav{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;border-left:3px solid transparent;transition:all .15s;font-size:13px;color:var(--dim);}
+  .nav:hover{background:var(--surface2);color:var(--text);}
+  .nav.active{border-left-color:var(--accent);background:rgba(79,142,247,.08);color:var(--accent);}
+  .main{padding:32px 40px;overflow-y:auto;}
+  .page{display:none;animation:fadeIn .2s ease;}
+  .page.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .ph{margin-bottom:28px;display:flex;align-items:flex-start;justify-content:space-between;}
+  .ph-left h1{font-size:22px;font-weight:700;}
+  .ph-left p{color:var(--dim);font-size:13px;margin-top:4px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;}
+  .ct{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .fg{margin-bottom:16px;}
+  .fl-label{display:block;font-size:12px;font-weight:600;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+  input[type=text],input[type=password],input[type=number],input[type=date],select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:var(--sans);font-size:14px;outline:none;transition:border-color .2s;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:var(--sans);}
+  .btn-p{background:var(--accent);color:#fff;}.btn-p:hover{background:#3b7be0;}
+  .btn-s{background:var(--success);color:#fff;}.btn-s:hover{background:#16a34a;}
+  .btn-d{background:var(--danger);color:#fff;}.btn-d:hover{background:#dc2626;}
+  .btn-w{background:var(--warning);color:#000;}
+  .btn-g{background:transparent;border:1px solid var(--border);color:var(--dim);}
+  .btn-g:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-sm{padding:6px 14px;font-size:12px;}
+  .btn:disabled{opacity:.35;cursor:not-allowed;}
+  .result{border-radius:8px;padding:12px 16px;font-size:13px;margin-top:12px;display:none;font-weight:500;white-space:pre-line;}
+  .result.show{display:block;animation:fadeIn .2s ease;}
+  .rs{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#4ade80;}
+  .re{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;}
+  .rw{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fbbf24;}
+  .ri{background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.3);color:#93c5fd;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:var(--surface2);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+  td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--dim);}
+  tr:last-child td{border:none;}
+  tr:hover td{background:rgba(255,255,255,.02);}
+  .st{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;}
+  .st::before{content:"●";font-size:8px;}
+  .st-ok{background:rgba(34,197,94,.15);color:#4ade80;}
+  .st-pd{background:rgba(245,158,11,.15);color:#fbbf24;}
+  .st-ng{background:rgba(239,68,68,.15);color:#f87171;}
+  .st-of{background:rgba(100,116,139,.15);color:#94a3b8;}
+  .ig{display:grid;gap:12px;margin-bottom:20px;}
+  .ig2{grid-template-columns:1fr 1fr;}.ig3{grid-template-columns:repeat(3,1fr);}
+  .it{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .it-l{font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+  .it-v{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--text);}
+  .it-u{font-size:12px;color:var(--muted);}
+  .time-big{font-family:var(--mono);font-size:36px;font-weight:600;color:var(--accent);text-align:center;padding:24px;background:var(--surface2);border-radius:10px;letter-spacing:3px;margin-bottom:20px;}
+  .state-bar{display:flex;margin-bottom:20px;}
+  .sc{padding:8px 16px;font-size:12px;font-weight:600;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-right:none;}
+  .sc:first-child{border-radius:8px 0 0 8px;}.sc:last-child{border-radius:0 8px 8px 0;border-right:1px solid var(--border);}
+  .sc.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .sc.done{color:var(--success);}
+  .sp{display:none;}.sp.active{display:block;}
+  .fl{display:flex;gap:12px;flex-wrap:wrap;}
+  .alert-i{background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.25);color:#93c5fd;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;}
+  .dg{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+  .dt{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+  .dt-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+  .dt-v{font-size:28px;font-weight:700;font-family:var(--mono);}
+  .dt-s{font-size:12px;color:var(--muted);margin-top:4px;}
+  .loading{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
+  .empty{text-align:center;padding:24px;color:var(--muted);font-size:13px;}
+  ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  /* login */
+  .lw{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 56px);background:radial-gradient(ellipse at 30% 40%,rgba(79,142,247,.06) 0%,transparent 60%);}
+  .lb{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 44px;width:400px;}
+  .lb-logo{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent);margin-bottom:4px;}
+  .lb-sub{font-size:13px;color:var(--muted);margin-bottom:32px;}
+  .mgr-section{border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:16px;margin-bottom:16px;background:rgba(245,158,11,.05);}
+  .mgr-title{font-size:12px;font-weight:700;color:var(--warning);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<!-- ════ ログイン画面 ════ -->
+<div id="v-login">
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;padding:0 24px;">
+    <span class="logo">KINTAI</span>
+    <span style="color:var(--border);margin:0 12px">|</span>
+    <span style="color:var(--dim);font-size:13px">社員勤怠管理システム</span>
+  </div>
+  <div class="lw">
+    <div class="lb">
+      <div class="lb-logo">KINTAI</div>
+      <div class="lb-sub">社員勤怠管理システム</div>
+      <div class="fg">
+        <label class="fl-label">社員ID</label>
+        <input type="text" id="l-id" placeholder="例：EMP0001" maxlength="30" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="fg">
+        <label class="fl-label">パスワード</label>
+        <input type="password" id="l-pw" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px" onclick="doLogin()" id="btn-login">ログイン</button>
+      <div id="l-res" class="result"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ メイン画面 ════ -->
+<div id="v-main" style="display:none">
+  <div class="layout">
+    <header class="topbar">
+      <span class="logo">KINTAI</span>
+      <span style="color:var(--border)">|</span>
+      <span style="color:var(--dim);font-size:13px">社員勤怠管理システム</span>
+      <div class="topbar-user">
+        <div class="avatar" id="t-av">?</div>
+        <span id="t-name">-</span>
+        <span id="t-role-badge" class="role-badge role-emp">社員</span>
+        <button class="btn-logout" onclick="doLogout()">ログアウト</button>
+      </div>
+    </header>
+
+    <!-- サイドバー（社員用） -->
+    <nav class="sidebar" id="sidebar-emp">
+      <div class="sidebar-sec">メニュー</div>
+      <div class="nav active" onclick="nav('dash',this)"><span>🏠</span> ダッシュボード</div>
+      <div class="nav" onclick="nav('stamp',this)"><span>🕐</span> 打刻</div>
+      <div class="sidebar-sec" style="margin-top:12px">申請</div>
+      <div class="nav" onclick="nav('ot',this)"><span>⏱</span> 残業申請</div>
+      <div class="nav" onclick="nav('leave',this)"><span>📋</span> 有給申請</div>
+      <div class="nav" onclick="nav('apply',this)"><span>📁</span> 申請管理</div>
+      <div class="sidebar-sec" style="margin-top:12px">設定</div>
+      <div class="nav" onclick="nav('wt',this)"><span>⚙️</span> 勤務区分設定</div>
+    </nav>
+
+    <!-- サイドバー（上長用） -->
+    <nav class="sidebar" id="sidebar-mgr" style="display:none">
+      <div class="sidebar-sec">メニュー</div>
+      <div class="nav active" onclick="nav('mgr-dash',this)"><span>🏠</span> ダッシュボード</div>
+      <div class="sidebar-sec" style="margin-top:12px">承認</div>
+      <div class="nav" onclick="nav('mgr-ot',this)"><span>⏱</span> 残業申請　承認</div>
+      <div class="nav" onclick="nav('mgr-leave',this)"><span>📋</span> 有給申請　承認</div>
+      <div class="nav" onclick="nav('mgr-apply',this)"><span>📁</span> 申請管理　承認</div>
+    </nav>
+
+    <main class="main">
+
+      <!-- ══ 社員：ダッシュボード ══ -->
+      <div id="p-dash" class="page active">
+        <div class="ph"><div class="ph-left"><h1>ダッシュボード</h1><p id="d-date">-</p></div></div>
+        <div class="dg">
+          <div class="dt"><div class="dt-l">今月の残業時間</div><div class="dt-v"><span id="d-ot">-</span><span style="font-size:16px;color:var(--muted)"> 時間</span></div><div class="dt-s">上限：80時間（通常45時間）</div></div>
+          <div class="dt"><div class="dt-l">有給残日数</div><div class="dt-v"><span id="d-lv">-</span><span style="font-size:16px;color:var(--muted)"> 日</span></div><div class="dt-s">今年度付与：20日</div></div>
+          <div class="dt"><div class="dt-l">打刻状態</div><div class="dt-v" style="font-size:18px" id="d-ss">-</div><div class="dt-s" id="d-st">-</div></div>
+        </div>
+        <div class="card">
+          <div class="ct">直近の申請状況</div>
+          <div id="d-recent"><div class="loading">読み込み中...</div></div>
+        </div>
+      </div>
+
+      <!-- ══ 社員：打刻 ══ -->
+      <div id="p-stamp" class="page">
+        <div class="ph"><div class="ph-left"><h1>打刻</h1><p>出勤・退勤・外出・戻りを記録します</p></div></div>
+        <div class="card">
+          <div class="time-big" id="s-clock">--:--:--</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+            <span style="font-size:13px;color:var(--muted)">現在の状態：</span>
+            <div class="state-bar" style="margin:0">
+              <div class="sc" id="sc0">未出勤</div>
+              <div class="sc" id="sc1">出勤中</div>
+              <div class="sc" id="sc2">外出中</div>
+              <div class="sc" id="sc3">退勤済</div>
+            </div>
+          </div>
+          <!-- 未出勤 -->
+          <div id="sp0" class="sp">
+            <div class="fl">
+              <button class="btn btn-s" onclick="doStamp('出勤打刻')">🟢 出勤打刻</button>
+              <button class="btn btn-g" disabled>外出打刻</button>
+              <button class="btn btn-g" disabled>戻り打刻</button>
+              <button class="btn btn-g" disabled>退勤打刻</button>
+            </div>
+            <div id="sr0" class="result"></div>
+          </div>
+          <!-- 出勤中 -->
+          <div id="sp1" class="sp">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">出勤時刻：<span id="s-ci" style="font-family:var(--mono);color:var(--text)">--:--</span></div>
+            <div class="fl">
+              <button class="btn btn-g" disabled>出勤打刻</button>
+              <button class="btn btn-w" onclick="doStamp('外出打刻')">🟡 外出打刻</button>
+              <button class="btn btn-g" disabled>戻り打刻</button>
+              <button class="btn btn-d" onclick="doStamp('退勤打刻')">🔴 退勤打刻</button>
+            </div>
+            <div id="sr1" class="result"></div>
+          </div>
+          <!-- 外出中 -->
+          <div id="sp2" class="sp">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">外出時刻：<span id="s-go" style="font-family:var(--mono);color:var(--text)">--:--</span></div>
+            <div class="fl">
+              <button class="btn btn-g" disabled>出勤打刻</button>
+              <button class="btn btn-g" disabled>外出打刻</button>
+              <button class="btn btn-p" onclick="doStamp('戻り打刻')">↩️ 戻り打刻</button>
+              <button class="btn btn-g" disabled>退勤打刻</button>
+            </div>
+            <div id="sr2" class="result"></div>
+          </div>
+          <!-- 退勤済 -->
+          <div id="sp3" class="sp">
+            <div class="alert-i">本日の打刻が完了しています。修正が必要な場合は変更申請を提出してください。</div>
+            <div class="fl" style="margin-bottom:16px">
+              <button class="btn btn-g" disabled>出勤打刻</button>
+              <button class="btn btn-g" disabled>外出打刻</button>
+              <button class="btn btn-g" disabled>戻り打刻</button>
+              <button class="btn btn-g" disabled>退勤打刻</button>
+            </div>
+            <button class="btn btn-p btn-sm" onclick="toggleCR()">📝 変更申請を提出</button>
+            <div id="cr-area" style="display:none;margin-top:16px">
+              <div class="fg"><label class="fl-label">修正理由</label><textarea id="cr-reason" style="height:80px" placeholder="例：打刻忘れのため、実際の出勤時刻に修正をお願いします"></textarea></div>
+              <button class="btn btn-p btn-sm" onclick="submitCR()">申請する</button>
+            </div>
+            <div id="sr3" class="result"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct">本日の打刻ログ</div>
+          <div id="s-log" style="font-family:var(--mono);font-size:12px;color:var(--dim);min-height:32px;line-height:2"><span style="color:var(--muted)">（打刻操作を行うとここに記録されます）</span></div>
+        </div>
+      </div>
+
+      <!-- ══ 社員：残業申請 ══ -->
+      <div id="p-ot" class="page">
+        <div class="ph"><div class="ph-left"><h1>残業申請</h1><p>残業時間を申請します</p></div></div>
+        <div class="g2">
+          <div class="card">
+            <div class="ct">申請フォーム</div>
+            <div class="ig ig2" style="margin-bottom:16px">
+              <div class="it"><div class="it-l">今月の残業累計</div><div class="it-v"><span id="ot-td">-</span><span class="it-u"> 時間</span></div></div>
+              <div class="it"><div class="it-l">通常上限まで</div><div class="it-v"><span id="ot-rm">-</span><span class="it-u"> 時間</span></div></div>
+            </div>
+            <div class="fg"><label class="fl-label">申請時間（時間）</label><input type="number" id="ot-h" placeholder="1〜4の整数"></div>
+            <div class="fg"><label class="fl-label">申請日</label><input type="date" id="ot-date"></div>
+            <button class="btn btn-p" onclick="doOT()">申請する</button>
+            <div id="ot-res" class="result"></div>
+          </div>
+          <div class="card">
+            <div class="ct">申請履歴</div>
+            <div id="ot-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 社員：有給申請 ══ -->
+      <div id="p-leave" class="page">
+        <div class="ph"><div class="ph-left"><h1>有給申請</h1><p>有給休暇の申請を行います</p></div></div>
+        <div class="g2">
+          <div class="card">
+            <div class="ct">申請フォーム</div>
+            <div class="ig ig2" style="margin-bottom:16px">
+              <div class="it"><div class="it-l">有給残日数</div><div class="it-v"><span id="lv-dd">-</span><span class="it-u"> 日</span></div></div>
+              <div class="it"><div class="it-l">申請状況</div><div style="margin-top:6px" id="lv-ca">-</div></div>
+            </div>
+            <div class="fg"><label class="fl-label">取得希望日</label><input type="date" id="lv-date" onchange="checkLeaveDate()"></div>
+            <button class="btn btn-p" onclick="doLV()">申請する</button>
+            <div id="lv-res" class="result"></div>
+          </div>
+          <div class="card">
+            <div class="ct">申請履歴</div>
+            <div id="lv-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 社員：申請管理 ══ -->
+      <div id="p-apply" class="page">
+        <div class="ph"><div class="ph-left"><h1>申請管理</h1><p>振替・欠勤などの申請を行います</p></div></div>
+        <div class="g2">
+          <div class="card">
+            <div class="ct">申請フォーム</div>
+            <div class="fg"><label class="fl-label">申請種別</label>
+              <select id="ap-type">
+                <option value="">選択してください</option>
+                <option value="振替申請">振替申請</option>
+                <option value="欠勤申請">欠勤申請</option>
+              </select>
+            </div>
+            <div class="fg"><label class="fl-label">対象日</label><input type="date" id="ap-date"></div>
+            <div class="fg"><label class="fl-label">申請理由</label><textarea id="ap-reason" style="height:80px" placeholder="申請理由を入力してください"></textarea></div>
+            <button class="btn btn-p" onclick="doAP()">申請する</button>
+            <div id="ap-res" class="result"></div>
+          </div>
+          <div class="card">
+            <div class="ct">申請履歴</div>
+            <div id="ap-list"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 社員：勤務区分設定 ══ -->
+      <div id="p-wt" class="page">
+        <div class="ph"><div class="ph-left"><h1>勤務区分設定</h1><p>勤務形態・時間帯・場所を設定します</p></div></div>
+        <div class="g2">
+          <div class="card">
+            <div class="ct">設定フォーム</div>
+            <div class="fg"><label class="fl-label">雇用形態</label>
+              <select id="wt-e" onchange="chkWT()">
+                <option value="">選択してください</option>
+                <option value="正社員">正社員</option>
+                <option value="契約社員">契約社員</option>
+                <option value="パート">パート</option>
+              </select>
+            </div>
+            <div class="fg"><label class="fl-label">勤務時間帯</label>
+              <select id="wt-s" onchange="chkWT()">
+                <option value="">選択してください</option>
+                <option value="日勤">日勤（9:00〜18:00）</option>
+                <option value="早番">早番（7:00〜16:00）</option>
+                <option value="遅番">遅番（12:00〜21:00）</option>
+                <option value="夜勤">夜勤（22:00〜7:00）</option>
+              </select>
+            </div>
+            <div class="fg"><label class="fl-label">曜日区分</label>
+              <select id="wt-d">
+                <option value="">選択してください</option>
+                <option value="平日">平日</option>
+                <option value="土曜">土曜</option>
+                <option value="日祝">日祝</option>
+              </select>
+            </div>
+            <div class="fg"><label class="fl-label">勤務場所</label>
+              <select id="wt-l" onchange="chkWT()">
+                <option value="">選択してください</option>
+                <option value="本社">本社</option>
+                <option value="支社">支社</option>
+                <option value="テレワーク">テレワーク</option>
+              </select>
+            </div>
+            <div id="wt-warn" class="result" style="margin-bottom:12px"></div>
+            <button class="btn btn-p" onclick="doWT()">設定を登録</button>
+            <div id="wt-res" class="result"></div>
+          </div>
+          <div class="card">
+            <div class="ct">現在の設定</div>
+            <div id="wt-cur"><div class="loading">読み込み中...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 上長：ダッシュボード ══ -->
+      <div id="p-mgr-dash" class="page">
+        <div class="ph"><div class="ph-left"><h1>ダッシュボード</h1><p id="mgr-date">-</p></div></div>
+        <div class="dg" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="dt"><div class="dt-l">残業申請　承認待ち</div><div class="dt-v"><span id="mgr-ot-cnt">-</span><span style="font-size:16px;color:var(--muted)"> 件</span></div></div>
+          <div class="dt"><div class="dt-l">有給申請　承認待ち</div><div class="dt-v"><span id="mgr-lv-cnt">-</span><span style="font-size:16px;color:var(--muted)"> 件</span></div></div>
+          <div class="dt"><div class="dt-l">その他申請　承認待ち</div><div class="dt-v"><span id="mgr-ap-cnt">-</span><span style="font-size:16px;color:var(--muted)"> 件</span></div></div>
+        </div>
+        <div class="card">
+          <div class="ct">承認待ち一覧（全社員）</div>
+          <div id="mgr-pending"><div class="loading">読み込み中...</div></div>
+        </div>
+      </div>
+
+      <!-- ══ 上長：残業申請 承認 ══ -->
+      <div id="p-mgr-ot" class="page">
+        <div class="ph"><div class="ph-left"><h1>残業申請　承認</h1><p>全社員の残業申請を確認・承認します</p></div>
+          <button class="btn btn-g btn-sm" onclick="loadMgrOt()">🔄 更新</button>
+        </div>
+        <div class="card">
+          <div id="mgr-ot-list"><div class="loading">読み込み中...</div></div>
+        </div>
+      </div>
+
+      <!-- ══ 上長：有給申請 承認 ══ -->
+      <div id="p-mgr-leave" class="page">
+        <div class="ph"><div class="ph-left"><h1>有給申請　承認</h1><p>全社員の有給申請を確認・承認します</p></div>
+          <button class="btn btn-g btn-sm" onclick="loadMgrLeave()">🔄 更新</button>
+        </div>
+        <div class="card">
+          <div id="mgr-lv-list"><div class="loading">読み込み中...</div></div>
+        </div>
+      </div>
+
+      <!-- ══ 上長：申請管理 承認 ══ -->
+      <div id="p-mgr-apply" class="page">
+        <div class="ph"><div class="ph-left"><h1>申請管理　承認</h1><p>全社員の振替・欠勤申請を確認・承認します</p></div>
+          <button class="btn btn-g btn-sm" onclick="loadMgrApply()">🔄 更新</button>
+        </div>
+        <div class="card">
+          <div id="mgr-ap-list"><div class="loading">読み込み中...</div></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// ★ ここにデプロイしたGASのURLを貼り付けてください ★
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbz0fFOMxOGNmdbtsGhXGDwQpWn37X4DZhj6j9d1aBqukjywvkdTcKWtjETTFiTgJfr_/exec';
+// ══════════════════════════════════════════════════════════
+
+let currentUser = null;
+let stampState = '未出勤';
+
+// ── API呼び出し ──
+async function api(params) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+  return res.json();
+}
+
+// ── ログイン ──
+async function doLogin() {
+  const id = document.getElementById('l-id').value.trim();
+  const pw = document.getElementById('l-pw').value;
+  const r = document.getElementById('l-res');
+  const btn = document.getElementById('btn-login');
+
+  if (!id || !pw) { sr(r,'re','社員IDとパスワードを入力してください'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '認証中...';
+
+  try {
+    const data = await api({ action: 'login', employeeId: id, password: pw });
+    if (data.ok) {
+      currentUser = data.user;
+      initMain();
+    } else {
+      // 失敗カウント記録
+      await api({ action: 'recordLoginFail', employeeId: id });
+      sr(r,'re', data.error || 'ログインに失敗しました');
+    }
+  } catch(e) {
+    sr(r,'re','サーバーに接続できません。GAS URLを確認してください。');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'ログイン';
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  stampState = '未出勤';
+  document.getElementById('v-main').style.display = 'none';
+  document.getElementById('v-login').style.display = 'block';
+  document.getElementById('l-pw').value = '';
+  document.getElementById('l-res').className = 'result';
+}
+
+function initMain() {
+  document.getElementById('v-login').style.display = 'none';
+  document.getElementById('v-main').style.display = 'block';
+
+  document.getElementById('t-av').textContent = currentUser.name.charAt(0);
+  document.getElementById('t-name').textContent = currentUser.name;
+
+  const isManager = currentUser.role === 'manager';
+  document.getElementById('sidebar-emp').style.display = isManager ? 'none' : 'block';
+  document.getElementById('sidebar-mgr').style.display = isManager ? 'block' : 'none';
+  document.getElementById('t-role-badge').textContent = isManager ? '上長' : '社員';
+  document.getElementById('t-role-badge').className = 'role-badge ' + (isManager ? 'role-mgr' : 'role-emp');
+  document.getElementById('t-av').className = 'avatar' + (isManager ? ' manager' : '');
+
+  if (isManager) {
+    showPageById('p-mgr-dash');
+    loadMgrDash();
+  } else {
+    showPageById('p-dash');
+    loadDash();
+    loadStamp();
+  }
+
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
+  ['d-date','mgr-date'].forEach(id => { const e=document.getElementById(id); if(e) e.textContent=dateStr; });
+
+  // 今日の日付をデフォルト設定
+  const today = d.toISOString().split('T')[0];
+  ['ot-date','lv-date','ap-date'].forEach(id => { const e=document.getElementById(id); if(e) e.value=today; });
+}
+
+// ── ナビゲーション ──
+function nav(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav').forEach(n => n.classList.remove('active'));
+  showPageById('p-' + id);
+  if (el) el.classList.add('active');
+
+  // ページ切替時にデータ読み込み
+  const loaders = {
+    'dash': loadDash, 'stamp': loadStamp,
+    'ot': loadOt, 'leave': loadLeave, 'apply': loadApply, 'wt': loadWt,
+    'mgr-dash': loadMgrDash, 'mgr-ot': loadMgrOt,
+    'mgr-leave': loadMgrLeave, 'mgr-apply': loadMgrApply,
+  };
+  if (loaders[id]) loaders[id]();
+}
+
+function showPageById(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+// ── 時計 ──
+setInterval(() => {
+  const e = document.getElementById('s-clock');
+  if (e) e.textContent = new Date().toTimeString().split(' ')[0];
+}, 1000);
+
+// ── ダッシュボード ──
+async function loadDash() {
+  try {
+    const data = await api({ action: 'getDashboard', employeeId: currentUser.employeeId });
+    if (!data.ok) return;
+    document.getElementById('d-ot').textContent = data.otTotal || 0;
+    document.getElementById('d-lv').textContent = data.leaveRemain;
+    document.getElementById('d-ss').textContent = data.stampState || '未出勤';
+    document.getElementById('d-st').textContent = data.stampTime || '-';
+
+    const recents = data.recent || [];
+    const recentEl = document.getElementById('d-recent');
+    if (!recents.length) { recentEl.innerHTML = '<div class="empty">申請履歴がありません</div>'; return; }
+    recentEl.innerHTML = `<table>
+      <tr><th>種別</th><th>申請日</th><th>ステータス</th></tr>
+      ${recents.map(r => `<tr><td>${r.type||'有給'}</td><td>${r.applyDate||''}</td><td>${stBadge(r.status)}</td></tr>`).join('')}
+    </table>`;
+  } catch(e) { console.error(e); }
+}
+
+// ── 打刻 ──
+async function loadStamp() {
+  try {
+    const data = await api({ action: 'getStamp', employeeId: currentUser.employeeId });
+    if (!data.ok) return;
+    stampState = data.state || '未出勤';
+    applyStampState(stampState);
+    if (data.checkinTime) document.getElementById('s-ci').textContent = data.checkinTime;
+    if (data.gooutTime) document.getElementById('s-go').textContent = data.gooutTime;
+    const log = data.log || [];
+    document.getElementById('s-log').innerHTML = log.length
+      ? log.map(l=>`<div>${l}</div>`).join('')
+      : '<span style="color:var(--muted)">（打刻操作を行うとここに記録されます）</span>';
+  } catch(e) { console.error(e); }
+}
+
+async function doStamp(action) {
+  const res = await api({ action: 'postStamp', employeeId: currentUser.employeeId, action });
+  const stateIdx = ['未出勤','出勤中','外出中','退勤済'].indexOf(stampState);
+  const resultEl = document.getElementById('sr' + stateIdx);
+  if (!res.ok) { sr(resultEl, 're', res.error); return; }
+
+  stampState = res.newState;
+  applyStampState(res.newState);
+  if (action === '出勤打刻') document.getElementById('s-ci').textContent = res.time;
+  if (action === '外出打刻') document.getElementById('s-go').textContent = res.time;
+
+  const logEl = document.getElementById('s-log');
+  const cur = logEl.innerHTML.includes('記録されます') ? '' : logEl.innerHTML;
+  logEl.innerHTML = cur + `<div>${res.logEntry}</div>`;
+  document.getElementById('d-ss').textContent = res.newState;
+}
+
+function applyStampState(state) {
+  const states = ['未出勤','出勤中','外出中','退勤済'];
+  const idx = states.indexOf(state);
+  document.querySelectorAll('.sp').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sc').forEach((c,i) => {
+    c.classList.remove('active','done');
+    if (i < idx) c.classList.add('done');
+    if (i === idx) c.classList.add('active');
+  });
+  const panel = document.getElementById('sp' + idx);
+  if (panel) panel.classList.add('active');
+}
+
+function toggleCR() {
+  const e = document.getElementById('cr-area');
+  e.style.display = e.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitCR() {
+  const reason = document.getElementById('cr-reason').value.trim();
+  if (!reason) { sr(document.getElementById('sr3'), 're', '修正理由を入力してください'); return; }
+  const res = await api({ action: 'postChangeRequest', employeeId: currentUser.employeeId, reason });
+  document.getElementById('cr-area').style.display = 'none';
+  sr(document.getElementById('sr3'), 'ri', '変更申請を提出しました。上長の承認をお待ちください。');
+}
+
+// ── 残業申請 ──
+async function loadOt() {
+  try {
+    const data = await api({ action: 'getOvertime', employeeId: currentUser.employeeId, role: currentUser.role });
+    if (!data.ok) return;
+    const list = (data.list || []).filter(r => r.employeeId === currentUser.employeeId);
+
+    // 今月累計
+    const thisMonth = new Date().toISOString().substring(0, 7);
+    const total = list.filter(r => (r.applyDate||'').startsWith(thisMonth) && r.status === '承認済')
+      .reduce((s, r) => s + (parseFloat(r.hours)||0), 0);
+    document.getElementById('ot-td').textContent = total;
+    document.getElementById('ot-rm').textContent = Math.max(0, 45 - total);
+
+    const el = document.getElementById('ot-list');
+    if (!list.length) { el.innerHTML = '<div class="empty">申請履歴がありません</div>'; return; }
+    el.innerHTML = `<table><tr><th>申請日</th><th>時間</th><th>状態</th></tr>
+      ${list.map(r=>`<tr><td>${r.applyDate||''}</td><td>${r.hours}時間</td><td>${stBadge(r.status)}</td></tr>`).join('')}
+    </table>`;
+  } catch(e) { console.error(e); }
+}
+
+async function doOT() {
+  const h = document.getElementById('ot-h').value;
+  const date = document.getElementById('ot-date').value;
+  const r = document.getElementById('ot-res');
+  if (!h || !date) { sr(r,'re','申請時間と申請日を入力してください'); return; }
+  const res = await api({ action: 'postOvertime', employeeId: currentUser.employeeId, hours: h, applyDate: date });
+  sr(r, res.ok ? (res.total > 45 ? 'rw' : 'rs') : 're', res.ok ? res.message : res.error);
+  if (res.ok) loadOt();
+}
+
+// ── 有給申請 ──
+async function loadLeave() {
+  try {
+    const data = await api({ action: 'getLeave', employeeId: currentUser.employeeId, role: currentUser.role });
+    if (!data.ok) return;
+    document.getElementById('lv-dd').textContent = data.leaveRemain;
+    document.getElementById('lv-ca').innerHTML = data.leaveRemain >= 1
+      ? '<span class="st st-ok">申請可能</span>'
+      : '<span class="st st-ng">残日数なし</span>';
+
+    const list = (data.list || []).filter(r => r.employeeId === currentUser.employeeId);
+    const el = document.getElementById('lv-list');
+    if (!list.length) { el.innerHTML = '<div class="empty">申請履歴がありません</div>'; return; }
+    el.innerHTML = `<table><tr><th>取得日</th><th>申請日</th><th>状態</th></tr>
+      ${list.map(r=>`<tr><td>${r.targetDate||''}</td><td>${r.applyDate||''}</td><td>${stBadge(r.status)}</td></tr>`).join('')}
+    </table>`;
+  } catch(e) { console.error(e); }
+}
+
+function checkLeaveDate() {
+  const dateVal = document.getElementById('lv-date').value;
+  if (!dateVal) return;
+  const target = new Date(dateVal);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.floor((target - today) / (1000*60*60*24));
+  const warn = document.getElementById('lv-res');
+  if (diff < 3) sr(warn, 'rw', '申請期限を過ぎています（取得日の3日前までに申請が必要です）');
+  else warn.className = 'result';
+}
+
+async function doLV() {
+  const date = document.getElementById('lv-date').value;
+  const r = document.getElementById('lv-res');
+  if (!date) { sr(r,'re','取得希望日を入力してください'); return; }
+  const res = await api({ action: 'postLeave', employeeId: currentUser.employeeId, targetDate: date });
+  sr(r, res.ok ? 'rs' : 're', res.ok ? res.message : res.error);
+  if (res.ok) loadLeave();
+}
+
+// ── 申請管理 ──
+async function loadApply() {
+  try {
+    const data = await api({ action: 'getApply', employeeId: currentUser.employeeId, role: currentUser.role });
+    if (!data.ok) return;
+    const list = (data.list || []).filter(r => r.employeeId === currentUser.employeeId);
+    const el = document.getElementById('ap-list');
+    if (!list.length) { el.innerHTML = '<div class="empty">申請履歴がありません</div>'; return; }
+    el.innerHTML = `<table><tr><th>種別</th><th>対象日</th><th>申請日</th><th>状態</th></tr>
+      ${list.map(r=>`<tr><td>${r.type||''}</td><td>${r.targetDate||''}</td><td>${r.applyDate||''}</td><td>${stBadge(r.status)}</td></tr>`).join('')}
+    </table>`;
+  } catch(e) { console.error(e); }
+}
+
+async function doAP() {
+  const type = document.getElementById('ap-type').value;
+  const date = document.getElementById('ap-date').value;
+  const reason = document.getElementById('ap-reason').value;
+  const r = document.getElementById('ap-res');
+  if (!type || !date) { sr(r,'re','申請種別と対象日を選択・入力してください'); return; }
+  const res = await api({
+    action: 'postApply', employeeId: currentUser.employeeId,
+    type, targetDate: date, reason,
+    role: '一般', employment: '正社員'  // 勤務区分から取得する拡張ポイント
+  });
+  sr(r, res.ok ? 'rs' : 're', res.ok ? res.message : res.error);
+  if (res.ok) loadApply();
+}
+
+// ── 勤務区分設定 ──
+async function loadWt() {
+  try {
+    const data = await api({ action: 'getWorktype', employeeId: currentUser.employeeId });
+    if (!data.ok) return;
+    const wt = data.worktype;
+    const el = document.getElementById('wt-cur');
+    if (!wt || !wt.employment) {
+      el.innerHTML = '<div class="empty">未設定です</div>';
+    } else {
+      el.innerHTML = `<table>
+        <tr><th>項目</th><th>設定値</th></tr>
+        <tr><td>雇用形態</td><td>${wt.employment}</td></tr>
+        <tr><td>勤務時間帯</td><td>${wt.shift}</td></tr>
+        <tr><td>曜日区分</td><td>${wt.daytype}</td></tr>
+        <tr><td>勤務場所</td><td>${wt.location}</td></tr>
+      </table>`;
+      // フォームに現在値を反映
+      ['wt-e','wt-s','wt-d','wt-l'].forEach((id, i) => {
+        const val = [wt.employment, wt.shift, wt.daytype, wt.location][i];
+        const sel = document.getElementById(id);
+        if (sel && val) {
+          const opt = Array.from(sel.options).find(o => o.value === val || o.text.startsWith(val));
+          if (opt) sel.value = opt.value;
+        }
+      });
+    }
+  } catch(e) { console.error(e); }
+}
+
+function chkWT() {
+  const e = document.getElementById('wt-e').value;
+  const s = document.getElementById('wt-s').value;
+  const l = document.getElementById('wt-l').value;
+  const w = document.getElementById('wt-warn');
+  if (s === '夜勤' && e === 'パート') sr(w,'re','パートは夜勤を設定できません');
+  else if (s === '夜勤' && l === 'テレワーク') sr(w,'re','夜勤とテレワークの組み合わせは設定できません');
+  else w.className = 'result';
+}
+
+async function doWT() {
+  const e = document.getElementById('wt-e').value;
+  const s = document.getElementById('wt-s').value;
+  const d = document.getElementById('wt-d').value;
+  const l = document.getElementById('wt-l').value;
+  const r = document.getElementById('wt-res');
+  if (!e||!s||!d||!l) { sr(r,'re','すべての項目を選択してください'); return; }
+  const res = await api({ action: 'postWorktype', employeeId: currentUser.employeeId, employment: e, shift: s, daytype: d, location: l });
+  sr(r, res.ok ? 'rs' : 're', res.ok ? res.message : res.error);
+  if (res.ok) loadWt();
+}
+
+// ── 上長：ダッシュボード ──
+async function loadMgrDash() {
+  try {
+    const [otData, lvData, apData] = await Promise.all([
+      api({ action: 'getOvertime', employeeId: currentUser.employeeId, role: 'manager' }),
+      api({ action: 'getLeave',    employeeId: currentUser.employeeId, role: 'manager' }),
+      api({ action: 'getApply',    employeeId: currentUser.employeeId, role: 'manager' }),
+    ]);
+    const otPending = (otData.list||[]).filter(r=>r.status==='承認待ち');
+    const lvPending = (lvData.list||[]).filter(r=>r.status==='承認待ち');
+    const apPending = (apData.list||[]).filter(r=>r.status==='承認待ち');
+
+    document.getElementById('mgr-ot-cnt').textContent = otPending.length;
+    document.getElementById('mgr-lv-cnt').textContent = lvPending.length;
+    document.getElementById('mgr-ap-cnt').textContent = apPending.length;
+
+    const all = [
+      ...otPending.map(r=>({...r,category:'残業申請'})),
+      ...lvPending.map(r=>({...r,category:'有給申請'})),
+      ...apPending.map(r=>({...r,category:r.type||'申請'})),
+    ].sort((a,b)=>(b.applyDate||'').localeCompare(a.applyDate||''));
+
+    const el = document.getElementById('mgr-pending');
+    if (!all.length) { el.innerHTML = '<div class="empty">承認待ちの申請はありません</div>'; return; }
+    el.innerHTML = `<table><tr><th>社員ID</th><th>種別</th><th>申請日</th><th>内容</th></tr>
+      ${all.map(r=>`<tr>
+        <td>${r.employeeId}</td>
+        <td>${r.category}</td>
+        <td>${r.applyDate||''}</td>
+        <td>${r.hours ? r.hours+'時間' : r.targetDate || r.reason || ''}</td>
+      </tr>`).join('')}
+    </table>`;
+  } catch(e) { console.error(e); }
+}
+
+// ── 上長：残業申請 承認 ──
+async function loadMgrOt() {
+  try {
+    const data = await api({ action: 'getOvertime', employeeId: currentUser.employeeId, role: 'manager' });
+    renderApproveList('mgr-ot-list', data.list||[], 'overtime',
+      r => `${r.employeeId}　${r.applyDate}　${r.hours}時間${r.note?'　⚠️'+r.note:''}`
+    );
+  } catch(e) { console.error(e); }
+}
+
+// ── 上長：有給申請 承認 ──
+async function loadMgrLeave() {
+  try {
+    const data = await api({ action: 'getLeave', employeeId: currentUser.employeeId, role: 'manager' });
+    renderApproveList('mgr-lv-list', data.list||[], 'leave',
+      r => `${r.employeeId}　申請日：${r.applyDate}　取得日：${r.targetDate}`
+    );
+  } catch(e) { console.error(e); }
+}
+
+// ── 上長：申請管理 承認 ──
+async function loadMgrApply() {
+  try {
+    const data = await api({ action: 'getApply', employeeId: currentUser.employeeId, role: 'manager' });
+    renderApproveList('mgr-ap-list', data.list||[], 'apply',
+      r => `${r.employeeId}　${r.type}　${r.applyDate}　${r.reason||''}`
+    );
+  } catch(e) { console.error(e); }
+}
+
+function renderApproveList(elId, list, type, descFn) {
+  const el = document.getElementById(elId);
+  if (!list.length) { el.innerHTML = '<div class="empty">申請データがありません</div>'; return; }
+  el.innerHTML = `<table>
+    <tr><th>内容</th><th>ステータス</th><th style="width:180px">操作</th></tr>
+    ${list.map(r=>`<tr>
+      <td>${descFn(r)}${r.hrNotice?'　<span style="color:var(--warning);font-size:11px">人事部通知済</span>':''}</td>
+      <td>${stBadge(r.status)}</td>
+      <td>${r.status==='承認待ち'
+        ? `<div class="fl" style="gap:6px">
+            <button class="btn btn-s btn-sm" onclick="doApprove('${type}','${r.id}','承認')">承認</button>
+            <button class="btn btn-d btn-sm" onclick="doApprove('${type}','${r.id}','却下')">却下</button>
+           </div>`
+        : '<span style="color:var(--muted);font-size:12px">処理済</span>'
+      }</td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+async function doApprove(type, id, action) {
+  const actionMap = {
+    overtime: 'approveOvertime',
+    leave:    'approveLeave',
+    apply:    'approveApply',
+  };
+  const res = await api({ action: actionMap[type], id, action, approvedBy: currentUser.employeeId });
+  if (res.ok) {
+    const loaders = { overtime: loadMgrOt, leave: loadMgrLeave, apply: loadMgrApply };
+    loaders[type]();
+    loadMgrDash();
+  } else {
+    alert('エラー：' + res.error);
+  }
+}
+
+// ── ユーティリティ ──
+function stBadge(status) {
+  if (!status) return '-';
+  if (status.includes('承認済') || status === '承認') return `<span class="st st-ok">${status}</span>`;
+  if (status === '承認待ち') return `<span class="st st-pd">${status}</span>`;
+  if (status === '却下') return `<span class="st st-ng">${status}</span>`;
+  return `<span class="st st-of">${status}</span>`;
+}
+
+function sr(el, cls, msg) {
+  el.className = `result ${cls} show`;
+  el.textContent = msg;
+}
+</script>
+</body>
+</html>
